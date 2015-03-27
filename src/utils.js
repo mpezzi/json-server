@@ -1,5 +1,4 @@
 var _ = require('underscore')
-var uuid = require('node-uuid')
 var _inflections = require('underscore.inflections')
 _.mixin(_inflections)
 
@@ -20,50 +19,6 @@ function toNative(value) {
   return value
 }
 
-// Return incremented id or uuid
-function createId(coll) {
-  if (_.isEmpty(coll)) {
-    return 1
-  } else {
-    var id = _.max(coll, function(doc) {
-      return doc.id
-    }).id
-
-    if (_.isFinite(id)) {
-      // Increment integer id
-      return ++id
-    } else {
-      // Generate string id
-      return uuid()
-    }
-  }
-}
-
-
-// Returns document ids that have unsatisfied relations
-// Example: a comment that references a post that doesn't exist
-function getRemovable(db) {
-  var removable = []
-
-  _(db).each(function(coll, collName) {
-    _(coll).each(function(doc) {
-      _(doc).each(function(value, key) {
-        if (/Id$/.test(key)) {
-          var refName = _.pluralize(key.slice(0, - 2))
-          var ref     = _.findWhere(db[refName], {id: value})
-          if (_.isUndefined(ref)) {
-            removable.push({ name: collName, id: doc.id })
-          }
-        }
-      })
-    })
-  })
-
-  return removable
-}
-
 module.exports = {
-  toNative: toNative,
-  createId: createId,
-  getRemovable: getRemovable
+  toNative: toNative
 }

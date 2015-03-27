@@ -1,3 +1,4 @@
+var _ = require('underscore')
 var request = require('supertest')
 var assert  = require('assert')
 var jsonServer  = require('../src/')
@@ -12,26 +13,80 @@ describe('Server', function() {
     db = {}
 
     db.posts = [
-      {id: 1, body: 'foo'},
-      {id: 2, body: 'bar'}
+      { 
+        uuid: '0000217a-8adb-11e1-94d2-12313928d5b8',
+        body: 'foo'
+      },
+      {
+        uuid: '0000e862-dbb2-11e3-9eb3-22000b04072f',
+        body: 'bar'
+      }
     ]
 
     db.tags = [
-      {id: 1, body: 'Technology'},
-      {id: 2, body: 'Photography'},
-      {id: 3, body: 'photo'}
+      {
+        uuid: '0000217a-8adb-11e1-94d2-12313928d5b8',
+        body: 'Technology'
+      },
+      {
+        uuid: '0000e862-dbb2-11e3-9eb3-22000b04072f',
+        body: 'Photography'
+      },
+      {
+        uuid: '00011541-824e-11e1-9eb5-12313928d5b8',
+        body: 'photo'
+      }
     ]
 
     db.comments = [
-      {id: 1, published: true,  postId: 1},
-      {id: 2, published: false, postId: 1},
-      {id: 3, published: false, postId: 2},
-      {id: 4, published: false, postId: 2},
-      {id: 5, published: false, postId: 2},
+      { 
+        uuid: '0000217a-8adb-11e1-94d2-12313928d5b8',
+        published: true,
+        weight: 0,
+        post: {
+          uuid: '0000217a-8adb-11e1-94d2-12313928d5b8'
+        }
+      },
+      {
+        uuid: '0000e862-dbb2-11e3-9eb3-22000b04072f',
+        published: false,
+        weight: 1,
+        post: {
+          uuid: '0000217a-8adb-11e1-94d2-12313928d5b8'
+        }
+      },
+      {
+        uuid: '00011541-824e-11e1-9eb5-12313928d5b8',
+        published: false,
+        weight: 2,
+        post: {
+          uuid: '0000e862-dbb2-11e3-9eb3-22000b04072f'
+        }
+      },
+      {
+        uuid: '0002a6ed-a8e9-11e3-9170-12313920a02c',
+        published: false,
+        weight: 3,
+        post: {
+          uuid: '0000e862-dbb2-11e3-9eb3-22000b04072f'
+        }
+      },
+      {
+        uuid: '0002b36c-8f95-11e4-b588-22000b04072f',
+        published: false,
+        weight: 4,
+        post: {
+          uuid: '0000e862-dbb2-11e3-9eb3-22000b04072f'
+        }
+      }
     ]
 
     db.refs = [
-      {id: 'abcd-1234', url: 'http://example.com', postId: 1}
+      {
+        id: 'abcd-1234',
+        url: 'http://example.com',
+        postId: 1
+      }
     ]
 
     router = jsonServer.router(db)
@@ -64,7 +119,7 @@ describe('Server', function() {
   describe('GET /:resource?attr=&attr=', function() {
     it('should respond with json and filter resources', function(done) {
       request(server)
-        .get('/comments?postId=1&published=true')
+        .get('/comments?published=true')
         .expect('Content-Type', /json/)
         .expect([db.comments[0]])
         .expect(200, done)
@@ -120,9 +175,9 @@ describe('Server', function() {
 
       it('should sort on numerical field', function(done) {
           request(server)
-              .get('/posts?_sort=id&_order=DESC')
+              .get('/comments?_sort=weight&_order=DESC')
               .expect('Content-Type', /json/)
-              .expect(db.posts.reverse())
+              .expect(db.comments.reverse())
               .expect(200, done)
       })
   })
@@ -142,7 +197,7 @@ describe('Server', function() {
   describe('GET /:parent/:parentId/:resource', function() {
     it('should respond with json and corresponding nested resources', function(done) {
       request(server)
-        .get('/posts/1/comments')
+        .get('/posts/0000217a-8adb-11e1-94d2-12313928d5b8/comments')
         .expect('Content-Type', /json/)
         .expect([
           db.comments[0],
@@ -152,10 +207,10 @@ describe('Server', function() {
     })
   })
 
-  describe('GET /:resource/:id', function() {
+  describe('GET /:resource/:uuid', function() {
     it('should respond with json and corresponding resource', function(done) {
       request(server)
-        .get('/posts/1')
+        .get('/posts/0000217a-8adb-11e1-94d2-12313928d5b8')
         .expect('Content-Type', /json/)
         .expect(db.posts[0])
         .expect(200, done)
@@ -172,16 +227,20 @@ describe('Server', function() {
 
 
   describe('POST /:resource', function() {
-    it('should respond with json, create a resource and increment id',
+    it('should respond with json, create a resource',
       function(done) {
         request(server)
           .post('/posts')
           .send({body: 'foo', booleanValue: 'true', integerValue: '1'})
           .expect('Content-Type', /json/)
-          .expect({id: 3, body: 'foo', booleanValue: true, integerValue: 1})
+          //.expect({body: 'foo', booleanValue: true, integerValue: 1})
           .expect(200)
           .end(function(err, res){
             if (err) return done(err)
+            var last = _.last(db.posts);
+            assert.equal(last.body, 'foo')
+            assert.equal(last.booleanValue, true)
+            assert.equal(last.integerValue, 1)
             assert.equal(db.posts.length, 3)
             done()
           })
@@ -202,18 +261,18 @@ describe('Server', function() {
       })
   })
 
-  describe('PUT /:resource/:id', function() {
+  describe('PUT /:resource/:uuid', function() {
     it('should respond with json and update resource', function(done) {
       request(server)
-        .put('/posts/1')
-        .send({id: 1, body: 'bar', booleanValue: 'true', integerValue: '1'})
+        .put('/posts/0000217a-8adb-11e1-94d2-12313928d5b8')
+        .send({body: 'bar', booleanValue: 'true', integerValue: '1'})
         .expect('Content-Type', /json/)
-        .expect({id: 1, body: 'bar', booleanValue: true, integerValue: 1})
+        .expect({uuid: '0000217a-8adb-11e1-94d2-12313928d5b8', body: 'bar', booleanValue: true, integerValue: 1})
         .expect(200)
         .end(function(err, res){
           if (err) return done(err)
           // assert it was created in database too
-          assert.deepEqual(db.posts[0], {id: 1, body: 'bar', booleanValue: true, integerValue: 1})
+          assert.deepEqual(db.posts[0], {uuid: '0000217a-8adb-11e1-94d2-12313928d5b8', body: 'bar', booleanValue: true, integerValue: 1})
           done()
         })
     })
@@ -228,18 +287,18 @@ describe('Server', function() {
     })
   })
 
-  describe('PATCH /:resource/:id', function() {
+  describe('PATCH /:resource/:uuid', function() {
     it('should respond with json and update resource', function(done) {
       request(server)
-        .patch('/posts/1')
+        .patch('/posts/0000217a-8adb-11e1-94d2-12313928d5b8')
         .send({body: 'bar'})
         .expect('Content-Type', /json/)
-        .expect({id: 1, body: 'bar'})
+        .expect({uuid: '0000217a-8adb-11e1-94d2-12313928d5b8', body: 'bar'})
         .expect(200)
         .end(function(err, res){
           if (err) return done(err)
           // assert it was created in database too
-          assert.deepEqual(db.posts[0], {id: 1, body: 'bar'})
+          assert.deepEqual(db.posts[0], {uuid: '0000217a-8adb-11e1-94d2-12313928d5b8', body: 'bar'})
           done()
         })
     })
@@ -254,15 +313,14 @@ describe('Server', function() {
     })
   })
 
-  describe('DELETE /:resource/:id', function() {
+  describe('DELETE /:resource/:uuid', function() {
     it('should respond with empty data, destroy resource and dependent resources', function(done) {
       request(server)
-        .del('/posts/1')
+        .del('/posts/0000217a-8adb-11e1-94d2-12313928d5b8')
         .expect(204)
         .end(function(err, res){
           if (err) return done(err)
           assert.equal(db.posts.length, 1)
-          assert.equal(db.comments.length, 3)
           done()
         })
     })

@@ -4,10 +4,16 @@ var bodyParser = require('body-parser')
 var _ = require('underscore')
 var low = require('lowdb')
 var utils = require('./utils')
+var _db = require('underscore-db')
+var _inflections = require('underscore.inflections')
 
-low.mixin(require('underscore-db'))
-low.mixin(require('underscore.inflections'))
-low.mixin({ createId: utils.createId })
+// Override __id function so 'uuid' can be used as primary key.
+_db.__id = function () {
+  return 'uuid'
+}
+
+low.mixin(_db)
+low.mixin(_inflections)
 
 module.exports = function(source) {
   // Create router
@@ -37,7 +43,7 @@ module.exports = function(source) {
   // GET /:resource
   // GET /:resource?q=
   // GET /:resource?attr=&attr=
-  // GET /:parent/:parentId/:resource?attr=&attr=
+  // GET /:parent/:parentUuid/:resource?attr=&attr=
   // GET /*?*&_end=
   // GET /*?*&_start=&_end=
   function list(req, res, next) {
@@ -46,6 +52,8 @@ module.exports = function(source) {
 
     // Result array
     var array
+    var parentPlural
+    var parentSingular
 
     // Remove _start and _end from req.query to avoid filtering using those
     // parameters
@@ -75,9 +83,24 @@ module.exports = function(source) {
 
     } else {
 
-      // Add :parentId filter in case URL is like /:parent/:parentId/:resource
+      // Add :parentUuid filter in case URL is like /:parent/:parentUuid/:resource
       if (req.params.parent) {
-        filters[req.params.parent.slice(0, - 1) + 'Id'] = +req.params.parentId
+
+        // Inspect the first item to determine the format, this format should not
+        // change between stored data.
+        item = db(req.params.resource).first()
+        parentPlural = req.params.parent;
+        parentSingular = _.singularize(req.params.parent)
+
+        // Filter instances where reference is an array, this would be a multiple reference.
+        if (_.isArray(item[parentPlural])) {
+          filters[parentPlural] = [ { uuid: req.params.parentUuid } ];
+        }
+        // Filter instances where reference is an object, this would be a singular reference.
+        else if (_.isObject(item[parentSingular])) {
+          filters[parentSingular] = { uuid: req.params.parentUuid };
+        }
+
       }
 
       // Add query parameters filters
@@ -124,10 +147,10 @@ module.exports = function(source) {
     res.jsonp(array)
   }
 
-  // GET /:resource/:id
+  // GET /:resource/:uuid
   function show(req, res, next) {
     var resource = db(req.params.resource)
-      .get(+req.params.id)
+      .get(req.params[_db.__id()])
 
     if (resource) {
       res.jsonp(resource)
@@ -148,15 +171,15 @@ module.exports = function(source) {
     res.jsonp(resource)
   }
 
-  // PUT /:resource/:id
-  // PATCH /:resource/:id
+  // PUT /:resource/:uuid
+  // PATCH /:resource/:uuid
   function update(req, res, next) {
     for (var key in req.body) {
       req.body[key] = utils.toNative(req.body[key])
     }
 
     var resource = db(req.params.resource)
-      .update(+req.params.id, req.body)
+      .update(req.params[_db.__id()], req.body)
 
     if (resource) {
       res.jsonp(resource)
@@ -165,17 +188,9 @@ module.exports = function(source) {
     }
   }
 
-  // DELETE /:resource/:id
+  // DELETE /:resource/:uuid
   function destroy(req, res, next) {
-    db(req.params.resource).remove(+req.params.id)
-
-    // Remove dependents documents
-    var removable = utils.getRemovable(db.object)
-
-    _(removable).each(function(item) {
-      db(item.name).remove(item.id)
-    })
-
+    db(req.params.resource).remove(req.params[_db.__id()])
     res.status(204).end()
   }
 
@@ -185,13 +200,13 @@ module.exports = function(source) {
     .get(list)
     .post(create)
 
-  router.route('/:resource/:id')
+  router.route('/:resource/:uuid')
     .get(show)
     .put(update)
     .patch(update)
     .delete(destroy)
 
-  router.get('/:parent/:parentId/:resource', list)
+  router.get('/:parent/:parentUuid/:resource', list)
 
   return router
 }
