@@ -180,7 +180,10 @@ var jsonServer = require('json-server-uuid')
 
 var object = {
   posts: [
-    { id: 1, body: 'foo' }
+    {
+      "uuid": "0003aae5-7543-6de4-f115-1b067a704106",
+      "name": "Post name 1"
+    }
   ]
 }
 
