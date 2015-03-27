@@ -1,22 +1,65 @@
-# JSON Server [![Build Status](https://travis-ci.org/mpezzi/json-server-uuid.svg)](https://travis-ci.org/mpezzi/json-server-uuid)
+# JSON Server UUID [![Build Status](https://travis-ci.org/mpezzi/json-server-uuid.svg)](https://travis-ci.org/mpezzi/json-server-uuid)
 
 > Get a full fake REST API with __zero coding__ in __less than 30 seconds__ (seriously)
 
-Created with <3 for front-end developers who need a quick back-end for prototyping and mocking.
+Forked from https://github.com/typicode/json-server
 
-Powers [JSONPlaceholder](http://jsonplaceholder.typicode.com)
+## <a name='toc'>Table of Contents</a>
+  * [Example](#example)
+  * [Routes](#routes)
+  * [Install](#install)
+  * [Extras](#extras)
+  * [Links](#links)
 
-## Example
+## [[⬆]](#example) <a name="example">Example</a>
 
 Create a `db.json` file
 
 ```javascript
 {
   "posts": [
-    { "id": 1, "title": "json-server", "author": "typicode" }
+    {
+      "uuid": "0003aae5-7543-6de4-f115-1b067a704106",
+      "name": "Post name 1"
+    },
+    {
+      "uuid": "0003asdf-7543-6de4-f115-1b067a70asdf",
+      "name": "Post name 2"
+    }
   ],
   "comments": [
-    { "id": 1, "body": "some comment", "postId": 1 }
+    {
+      "uuid": "0003rewq-7543-6de4-f115-1b067a70rewq",
+      "name": "Comment name 1",
+      "post": {
+        "uuid": "0003aae5-7543-6de4-f115-1b067a704106",
+        "name": "Post name 1"
+      }
+    },
+    {
+      "uuid": "0003zxcv-7543-6de4-f115-1b067a70zxcv",
+      "name": "Comment name 2",
+      "post": {
+        "uuid": "0003asdf-7543-6de4-f115-1b067a70asdf",
+        "name": "Post name 2"
+      }
+    },
+  ],
+  "tags": [
+    {
+      "uuid": "0003uiop-7543-6de4-f115-1b067a70uiop",
+      "name": "JavaScript",
+      "posts": [
+        {
+          "uuid": "0003aae5-7543-6de4-f115-1b067a704106",
+          "name": "Post name 1"
+        },
+        {
+          "uuid": "0003asdf-7543-6de4-f115-1b067a70asdf",
+          "name": "Post name 2"
+        }
+      ]
+    }
   ]
 }
 ```
@@ -27,41 +70,44 @@ Start JSON Server
 $ json-server db.json
 ```
 
-Now if you go to [http://localhost:3000/posts/1](), you'll get
+Now if you go to [http://localhost:3000/posts/0003aae5-7543-6de4-f115-1b067a704106](), you'll get
 
 ```javascript
-{ "id": 1, "title": "json-server", "author": "typicode" }
+{
+  "uuid": "0003aae5-7543-6de4-f115-1b067a704106",
+  "name": "Post name 1"
+}
 ```
 
 Also, if you make POST, PUT, PATCH or DELETE requests, changes will be saved to `db.json`
 
-## Routes
+## [[⬆]](#routes) <a name="routes">Routes</a>
 
 Here are all the available routes.
 
 ```
 GET   /posts
-GET   /posts/1
-GET   /posts/1/comments
+GET   /posts/0003aae5-7543-6de4-f115-1b067a704106
+GET   /posts/0003aae5-7543-6de4-f115-1b067a704106/comments
 GET   /posts?title=json-server&author=typicode
 POST  /posts
-PUT   /posts/1
-PATCH /posts/1
-DEL   /posts/1
+PUT   /posts/0003aae5-7543-6de4-f115-1b067a704106
+PATCH /posts/0003aae5-7543-6de4-f115-1b067a704106
+DEL   /posts/0003aae5-7543-6de4-f115-1b067a704106
 ```
 
 To slice resources, add `_start` and `_end`.
 
 ```
 GET /posts?_start=0&_end=10
-GET /posts/1/comments?_start=0&_end=10
+GET /posts/0003aae5-7543-6de4-f115-1b067a704106/comments?_start=0&_end=10
 ```
 
 To sort resources, add `_sort` and `_order` (ascending order by default).
 
 ```
 GET /posts?_sort=views&_order=DESC
-GET /posts/1/comments?_sort=votes&_order=ASC
+GET /posts/0003aae5-7543-6de4-f115-1b067a704106/comments?_sort=votes&_order=ASC
 ```
 
 To make a full-text search on resources, add `q`.
@@ -82,13 +128,13 @@ Returns default index file or serves `./public` directory.
 GET /
 ```
 
-## Install
+## [[⬆]](#install) <a name="install">Install</a>
 
 ```bash
 $ npm install -g json-server
 ```
 
-## Extras
+## [[⬆]](#extras) <a name="extras">Extras</a>
 
 ### Static file server
 
@@ -104,7 +150,6 @@ You can load remote schemas:
 
 ```bash
 $ json-server http://example.com/file.json
-$ json-server http://jsonplaceholder.typicode.com/db
 ```
 
 ### JS file support
@@ -131,7 +176,7 @@ $ json-server index.js
 You can use JSON Server as a module:
 
 ```javascript
-var jsonServer = require('json-server')
+var jsonServer = require('json-server-uuid')
 
 var object = {
   posts: [
@@ -146,21 +191,7 @@ server.use(router)
 server.listen(3000)
 ```
 
-### Deployment
-
-You can deploy JSON Server. For example, [JSONPlaceholder](http://jsonplaceholder.typicode.com) is an online fake API powered by JSON Server and running on Heroku.
-
-## Links
-
-### Video
-
-* [Creating Demo APIs with json-server on egghead.io](https://egghead.io/lessons/nodejs-creating-demo-apis-with-json-server)
-
-### Articles
-
-* [Fast prototyping using Restangular and Json-server](http://glebbahmutov.com/blog/fast-prototyping-restangular-and-json-server/)
-* [ng-admin: Add an AngularJS admin GUI to any RESTful API](http://marmelab.com/blog/2014/09/15/easy-backend-for-your-restful-api.html)
-* [how to build quick json REST APIs for development](http://outloudthinking.me/how-to-build-quick-json-rest-apis/)
+## [[⬆]](#links) <a name="links">Links</a>
 
 ### Projects
 
